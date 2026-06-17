@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Trophy, Heart, Clock, ArrowLeft, RotateCcw, 
-  HelpCircle, Home, CheckCircle2, AlertOctagon, HelpCircle as HelpIcon,
+  Home, HelpCircle as HelpIcon,
   ArrowUp, ArrowDown, ArrowLeft as ArrowLeftIcon, ArrowRight
 } from 'lucide-react';
 import { sound } from '../utils/sound';
@@ -429,10 +429,10 @@ export default function MazeChase({ game, onBack }) {
           ctx.shadowBlur = 0; // reset shadow
 
           // Measure text width to render a beautiful text pill badge centered over the zone
-          ctx.font = 'bold 9px Inter, system-ui, sans-serif';
+          ctx.font = 'bold 12px Inter, system-ui, sans-serif';
           const textWidth = ctx.measureText(optionText).width;
-          const badgeW = Math.max(cellW * 1.6, textWidth + 12);
-          const badgeH = 18;
+          const badgeW = Math.max(cellW * 1.6, textWidth + 16);
+          const badgeH = 24;
           const bx = zone.x * cellW + cellW / 2 - badgeW / 2;
           const by = zone.y * cellH + cellH / 2 - badgeH / 2;
 
@@ -443,7 +443,7 @@ export default function MazeChase({ game, onBack }) {
           
           ctx.beginPath();
           if (ctx.roundRect) {
-            ctx.roundRect(bx, by, badgeW, badgeH, 6);
+            ctx.roundRect(bx, by, badgeW, badgeH, 8);
           } else {
             ctx.rect(bx, by, badgeW, badgeH);
           }
@@ -454,7 +454,7 @@ export default function MazeChase({ game, onBack }) {
           ctx.fillStyle = '#ffffff';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(optionText, zone.x * cellW + cellW / 2, zone.y * cellH + cellH / 2 + 0.5);
+          ctx.fillText(optionText, zone.x * cellW + cellW / 2, zone.y * cellH + cellH / 2 + 1);
         });
       }
 
@@ -473,11 +473,12 @@ export default function MazeChase({ game, onBack }) {
         ctx.fillStyle = '#000';
         let eyeX = px;
         let eyeY = py;
-        if (player.currentDir === 'up') eyeY -= 3;
-        else if (player.currentDir === 'down') eyeY += 3;
-        else if (player.currentDir === 'left') eyeX -= 3;
-        else if (player.currentDir === 'right') eyeX += 3;
-        else eyeY -= 1; // looking slightly up normally
+        const eyeOffset = Math.round(playerRadius * 0.25);
+        if (player.currentDir === 'up') eyeY -= eyeOffset;
+        else if (player.currentDir === 'down') eyeY += eyeOffset;
+        else if (player.currentDir === 'left') eyeX -= eyeOffset;
+        else if (player.currentDir === 'right') eyeX += eyeOffset;
+        else eyeY -= Math.round(playerRadius * 0.08);
         
         ctx.beginPath();
         ctx.arc(eyeX, eyeY, playerRadius * 0.2, 0, Math.PI * 2);
@@ -499,7 +500,7 @@ export default function MazeChase({ game, onBack }) {
         const tentacleWaves = 3;
         for (let i = 0; i < tentacleWaves; i++) {
           const waveX = gx + r - (i * 2 * r) / tentacleWaves;
-          const offset = Math.sin(Date.now() / 80 + i) * 2.5;
+          const offset = Math.sin(Date.now() / 80 + i) * (r * 0.18);
           ctx.lineTo(waveX, gy + r + offset);
         }
         
@@ -518,10 +519,11 @@ export default function MazeChase({ game, onBack }) {
         ctx.fillStyle = '#000';
         let pupilDx = 0;
         let pupilDy = 0;
-        if (ghost.currentDir === 'left') pupilDx = -1.5;
-        if (ghost.currentDir === 'right') pupilDx = 1.5;
-        if (ghost.currentDir === 'up') pupilDy = -1.5;
-        if (ghost.currentDir === 'down') pupilDy = 1.5;
+        const pupilOffset = Math.round(r * 0.12);
+        if (ghost.currentDir === 'left') pupilDx = -pupilOffset;
+        if (ghost.currentDir === 'right') pupilDx = pupilOffset;
+        if (ghost.currentDir === 'up') pupilDy = -pupilOffset;
+        if (ghost.currentDir === 'down') pupilDy = pupilOffset;
 
         ctx.beginPath();
         ctx.arc(gx - r * 0.35 + pupilDx, gy - r * 0.15 + pupilDy, r * 0.09, 0, Math.PI * 2);
@@ -543,7 +545,7 @@ export default function MazeChase({ game, onBack }) {
   const currentQ = questions[currentQIndex];
 
   return (
-    <div style={styles.container}>
+    <div className="game-container">
       {/* Top Header Navigation */}
       <div style={styles.headerNav}>
         <button onClick={() => { sound.playClick(); onBack(); }} style={styles.backBtn}>
@@ -554,157 +556,230 @@ export default function MazeChase({ game, onBack }) {
 
       {gameState === 'intro' && (
         /* Game Introduction Screen */
-        <div className="glass-panel animate-fade-in" style={styles.introCard}>
-          <div style={{ ...styles.gameBadge, background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6' }}>👾 Pengejaran Labirin</div>
-          <h2 style={styles.title}>{title}</h2>
-          <p style={styles.desc}>{desc || 'Gunakan tombol arah keyboard (Arrow Keys / WASD) untuk mengendalikan karakter. Arahkan karakter langsung ke kotak jawaban yang benar di dalam labirin dan hindari kejaran monster!'}</p>
-          
-          <div style={styles.metaRow}>
-            <div style={styles.metaItem}>
-              <HelpIcon size={20} color="var(--secondary)" />
-              <span>{questions.length} Pertanyaan</span>
-            </div>
-            <div style={styles.metaItem}>
-              <Heart size={20} color="var(--danger)" />
-              <span>3 Kesempatan Nyawa</span>
-            </div>
+        <div className="glass-panel animate-fade-in intro-split-layout">
+          <div className="intro-info">
+            <div style={{ ...styles.gameBadge, background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6' }}>👾 Pengejaran Labirin</div>
+            <h2 style={{ ...styles.title, textAlign: 'left', margin: 0 }}>{title}</h2>
+            <p style={{ ...styles.desc, textAlign: 'left' }}>{desc || 'Gunakan tombol arah keyboard (Arrow Keys / WASD) atau D-pad untuk mengendalikan karakter. Arahkan karakter langsung ke kotak jawaban yang benar di dalam labirin dan hindari kejaran monster!'}</p>
+            
+            <button onClick={handleStartGame} className="btn btn-primary" style={styles.startBtn}>
+              Mulai Bermain
+            </button>
           </div>
 
-          <button onClick={handleStartGame} className="btn btn-primary" style={styles.startBtn}>
-            Mulai Bermain
-          </button>
+          <div className="intro-illustration">
+            <h3 className="intro-ill-title"><HelpIcon size={16} color="var(--secondary)" /> Info & Kontrol</h3>
+            <div style={styles.metaRow}>
+              <div style={styles.metaItem}>
+                <HelpIcon size={20} color="var(--secondary)" />
+                <span>{questions.length} Pertanyaan</span>
+              </div>
+            </div>
+            <div style={styles.metaRow}>
+              <div style={styles.metaItem}>
+                <Heart size={20} color="var(--danger)" />
+                <span>3 Kesempatan Nyawa</span>
+              </div>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '10px' }}>
+              <strong>Kontrol Gerakan:</strong> Gunakan keyboard <strong>Arrow Keys / WASD</strong> atau gunakan tombol arah D-pad virtual di layar saat bermain.
+            </p>
+          </div>
         </div>
       )}
 
       {gameState === 'playing' && (
-        /* Gameplay Panel */
-        <div style={styles.playLayout} className="animate-fade-in">
-          {/* Stats Bar */}
-          <div className="glass-panel" style={styles.statsBar}>
-            <div style={styles.stat}>
-              <Trophy size={18} color="var(--warning)" />
-              <div>
-                <span style={styles.statLabel}>SKOR</span>
-                <span style={styles.statValue}>{score}</span>
-              </div>
-            </div>
-            <div style={styles.stat}>
-              <Heart size={18} color="var(--danger)" />
-              <div>
-                <span style={styles.statLabel}>NYAWA</span>
-                <span style={{ ...styles.statValue, color: lives === 1 ? 'var(--danger)' : 'white', display: 'flex', gap: '2px' }}>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Heart 
-                      key={i} 
-                      size={16} 
-                      fill={i < lives ? 'var(--danger)' : 'transparent'} 
-                      color={i < lives ? 'var(--danger)' : 'rgba(255,255,255,0.2)'} 
-                    />
-                  ))}
-                </span>
-              </div>
-            </div>
-            <div style={styles.stat}>
-              <Clock size={18} color="var(--primary)" />
-              <div>
-                <span style={styles.statLabel}>WAKTU</span>
-                <span style={styles.statValue}>{time}s</span>
-              </div>
-            </div>
-          </div>
+        /* Gameplay Panel with Split Layout */
+        <div className="maze-game-layout animate-fade-in">
+          {/* Left Sidebar: Stats & D-pad */}
+          <aside className="game-sidebar">
+            <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <h3 style={{ fontSize: '1rem', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px', fontWeight: '600' }}>
+                Status Labirin
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ ...styles.stat, justifyContent: 'flex-start', background: 'rgba(255,255,255,0.02)', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <Trophy size={18} color="var(--warning)" />
+                  <div>
+                    <span style={styles.statLabel}>SKOR</span>
+                    <span style={styles.statValue}>{score}</span>
+                  </div>
+                </div>
 
-          {/* Question Banner (Options grid removed as per instructions) */}
-          {currentQ && (
-            <div className="glass-panel" style={styles.questionBanner}>
-              <div style={styles.qHeader}>
-                <span style={styles.qProgress}>SOAL {currentQIndex + 1} DARI {questions.length}</span>
+                <div style={{ ...styles.stat, justifyContent: 'flex-start', background: 'rgba(255,255,255,0.02)', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <Heart size={18} color="var(--danger)" />
+                  <div>
+                    <span style={styles.statLabel}>NYAWA</span>
+                    <span style={{ ...styles.statValue, color: lives === 1 ? 'var(--danger)' : 'white', display: 'flex', gap: '2px', marginTop: '2px' }}>
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <Heart 
+                          key={i} 
+                          size={14} 
+                          fill={i < lives ? 'var(--danger)' : 'transparent'} 
+                          color={i < lives ? 'var(--danger)' : 'rgba(255,255,255,0.2)'} 
+                        />
+                      ))}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ ...styles.stat, justifyContent: 'flex-start', background: 'rgba(255,255,255,0.02)', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <Clock size={18} color="var(--primary)" />
+                  <div>
+                    <span style={styles.statLabel}>WAKTU</span>
+                    <span style={styles.statValue}>{time}s</span>
+                  </div>
+                </div>
               </div>
-              <h3 style={styles.qText}>{currentQ.q}</h3>
             </div>
-          )}
 
-          {/* Game Canvas Container */}
-          <div style={styles.canvasContainer}>
-            <canvas 
-              ref={canvasRef} 
-              width={510} 
-              height={450} 
-              style={styles.canvas}
-            />
+            {/* Virtual D-pad Card */}
+            <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <h4 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600', width: '100%', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px' }}>
+                D-pad Kontrol Sentuh
+              </h4>
+              <div style={styles.dpadContainer}>
+                <div style={styles.dpadRow}>
+                  <button onClick={() => handleDPadPress('up')} style={styles.dpadBtn} className="btn btn-secondary">
+                    <ArrowUp size={16} />
+                  </button>
+                </div>
+                <div style={styles.dpadRow}>
+                  <button onClick={() => handleDPadPress('left')} style={styles.dpadBtn} className="btn btn-secondary">
+                    <ArrowLeftIcon size={16} />
+                  </button>
+                  <div style={{ width: '30px' }} />
+                  <button onClick={() => handleDPadPress('right')} style={styles.dpadBtn} className="btn btn-secondary">
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+                <div style={styles.dpadRow}>
+                  <button onClick={() => handleDPadPress('down')} style={styles.dpadBtn} className="btn btn-secondary">
+                    <ArrowDown size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </aside>
 
-            {/* Collision Feedback Overlay */}
-            {feedbackMsg && (
-              <div style={{
-                ...styles.feedbackOverlay,
-                backgroundColor: feedbackMsg.type === 'correct' 
-                  ? 'rgba(16, 185, 129, 0.85)' 
-                  : feedbackMsg.type === 'wrong' 
-                    ? 'rgba(239, 68, 68, 0.85)' 
-                    : 'rgba(249, 115, 22, 0.85)'
-              }} className="animate-pop">
-                <span style={styles.feedbackText}>{feedbackMsg.text}</span>
+          {/* Right Column: Question Banner & Game Canvas */}
+          <main className="maze-canvas-wrapper">
+            {/* Question Banner */}
+            {currentQ && (
+              <div className="glass-panel" style={{ ...styles.questionBanner, maxWidth: '100%' }}>
+                <div style={styles.qHeader}>
+                  <span style={styles.qProgress}>PERTANYAAN {currentQIndex + 1} DARI {questions.length}</span>
+                </div>
+                <h3 style={styles.qText}>{currentQ.q}</h3>
               </div>
             )}
-          </div>
 
-          {/* Virtual D-pad (Extremely compact helper for touch support, kept simple) */}
-          <div style={styles.dpadContainer}>
-            <div style={styles.dpadRow}>
-              <button onClick={() => handleDPadPress('up')} style={styles.dpadBtn} className="btn btn-secondary">
-                <ArrowUp size={16} />
-              </button>
+            {/* Game Canvas */}
+            <div style={{ ...styles.canvasContainer, maxWidth: '100%', width: '100%', height: 'auto', aspectRatio: '17/15' }}>
+              <canvas 
+                ref={canvasRef} 
+                width={680} 
+                height={600} 
+                style={styles.canvas}
+              />
+
+              {/* Collision Feedback Overlay */}
+              {feedbackMsg && (
+                <div style={{
+                  ...styles.feedbackOverlay,
+                  backgroundColor: feedbackMsg.type === 'correct' 
+                    ? 'rgba(16, 185, 129, 0.85)' 
+                    : feedbackMsg.type === 'wrong' 
+                      ? 'rgba(239, 68, 68, 0.85)' 
+                      : 'rgba(249, 115, 22, 0.85)'
+                }} className="animate-pop">
+                  <span style={styles.feedbackText}>{feedbackMsg.text}</span>
+                </div>
+              )}
             </div>
-            <div style={styles.dpadRow}>
-              <button onClick={() => handleDPadPress('left')} style={styles.dpadBtn} className="btn btn-secondary">
-                <ArrowLeftIcon size={16} />
-              </button>
-              <div style={{ width: '30px' }}></div>
-              <button onClick={() => handleDPadPress('right')} style={styles.dpadBtn} className="btn btn-secondary">
-                <ArrowRight size={16} />
-              </button>
-            </div>
-            <div style={styles.dpadRow}>
-              <button onClick={() => handleDPadPress('down')} style={styles.dpadBtn} className="btn btn-secondary">
-                <ArrowDown size={16} />
-              </button>
-            </div>
-          </div>
+          </main>
         </div>
       )}
 
       {gameState === 'ended' && (
-        /* Ending Summary Screen */
-        <div className="glass-panel animate-fade-in" style={styles.endedCard}>
-          <div style={styles.trophyIcon}>{lives > 0 ? '🏆' : '💀'}</div>
-          <h2 style={styles.victoryTitle}>{lives > 0 ? 'Misi Selesai!' : 'Game Over'}</h2>
-          <p style={styles.victorySubtitle}>
-            {lives > 0 
-              ? 'Luar biasa! Anda berhasil menaklukkan labirin kuis ini!' 
-              : 'Jangan menyerah! Coba lagi untuk mengalahkan monster labirin.'}
-          </p>
+        /* Scoreboard Screen with Split Layout */
+        <div className="glass-panel animate-fade-in ended-split-layout">
+          {/* Left Column: Stats & Summary */}
+          <div className="ended-stats-panel">
+            <div style={styles.trophyIcon}>{lives > 0 ? '🏆' : '💀'}</div>
+            <h2 style={styles.victoryTitle}>{lives > 0 ? 'Misi Selesai!' : 'Game Over'}</h2>
+            <p style={styles.victorySubtitle}>
+              {lives > 0 
+                ? 'Luar biasa! Anda berhasil menaklukkan labirin kuis ini!' 
+                : 'Jangan menyerah! Coba lagi untuk mengalahkan monster labirin.'}
+            </p>
 
-          <div style={styles.scoreBoardGrid}>
-            <div style={styles.scoreItem}>
-              <span style={styles.scoreVal}>{score}</span>
-              <span style={styles.scoreLbl}>Total Skor</span>
+            <div style={styles.scoreBoardGrid}>
+              <div style={styles.scoreItem}>
+                <span style={styles.scoreVal}>{score}</span>
+                <span style={styles.scoreLbl}>Total Skor</span>
+              </div>
+              <div style={styles.scoreItem}>
+                <span style={styles.scoreVal}>{time} Detik</span>
+                <span style={styles.scoreLbl}>Waktu Bermain</span>
+              </div>
+              <div style={styles.scoreItem}>
+                <span style={styles.scoreVal}>{lives} / 3</span>
+                <span style={styles.scoreLbl}>Sisa Nyawa</span>
+              </div>
             </div>
-            <div style={styles.scoreItem}>
-              <span style={styles.scoreVal}>{time} Detik</span>
-              <span style={styles.scoreLbl}>Waktu Bermain</span>
-            </div>
-            <div style={styles.scoreItem}>
-              <span style={styles.scoreVal}>{lives} / 3</span>
-              <span style={styles.scoreLbl}>Sisa Nyawa</span>
+
+            <div style={styles.endActions}>
+              <button onClick={() => { sound.playClick(); onBack(); }} className="btn btn-secondary" style={{ flex: 1 }}>
+                <Home size={18} /> Menu
+              </button>
+              <button onClick={handleStartGame} className="btn btn-primary" style={{ flex: 1 }}>
+                <RotateCcw size={18} /> Main Lagi
+              </button>
             </div>
           </div>
 
-          <div style={styles.endActions}>
-            <button onClick={() => { sound.playClick(); onBack(); }} className="btn btn-secondary">
-              <Home size={18} /> Menu Utama
-            </button>
-            <button onClick={handleStartGame} className="btn btn-primary">
-              <RotateCcw size={18} /> Main Lagi
-            </button>
+          {/* Right Column: Question Review */}
+          <div className="ended-review-panel">
+            <h3 style={{ ...styles.summaryTitle, marginTop: 0 }}>Tinjauan Soal</h3>
+            <div style={{ ...styles.summaryList, maxHeight: '360px', overflowY: 'auto' }}>
+              {questions.map((q, idx) => (
+                <div key={idx} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'rgba(10,11,18,0.2)',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.03)',
+                  marginBottom: '10px',
+                  flexWrap: 'wrap',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '700',
+                      fontSize: '0.8rem',
+                      background: 'rgba(255,255,255,0.05)',
+                      color: 'white'
+                    }}>
+                      #{idx + 1}
+                    </span>
+                    <span style={{ fontSize: '0.9rem', color: 'white', fontWeight: '500' }}>{q.q}</span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--success)', fontWeight: '600' }}>Kunci: {q.options[q.correct]}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -838,11 +913,11 @@ const styles = {
   },
   questionBanner: {
     width: '100%',
-    maxWidth: '510px',
-    padding: '12px 16px',
+    maxWidth: '680px',
+    padding: '14px 20px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '5px',
+    gap: '6px',
     flexShrink: 0
   },
   qHeader: {
@@ -850,21 +925,21 @@ const styles = {
     justifyContent: 'center'
   },
   qProgress: {
-    fontSize: '0.7rem',
+    fontSize: '0.8rem',
     color: 'var(--secondary)',
     fontWeight: '800',
     letterSpacing: '0.05em'
   },
   qText: {
-    fontSize: '1.1rem',
+    fontSize: '1.3rem',
     textAlign: 'center',
     color: 'white',
     lineHeight: '1.3'
   },
   canvasContainer: {
     position: 'relative',
-    width: '510px',
-    height: '450px',
+    width: '680px',
+    height: '600px',
     borderRadius: '16px',
     overflow: 'hidden',
     boxShadow: '0 15px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08)',

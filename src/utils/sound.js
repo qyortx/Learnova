@@ -44,9 +44,6 @@ export const sound = {
   },
   
   playCorrect() {
-    const ctx = getAudioContext();
-    const now = ctx.currentTime;
-    
     // Play double chime: C5 (523Hz) then E5 (659Hz)
     playTone(523.25, 'triangle', 0.15, 0.15);
     setTimeout(() => {

@@ -1,13 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   Plus, Trash2, Edit2, Share2, Play, Copy, Check, ArrowLeft, 
-  HelpCircle, Sparkles, LayoutGrid, Gamepad2, AlertCircle, FileText
+  HelpCircle, Sparkles, LayoutGrid, Gamepad2, FileText,
+  BookOpen, Lightbulb
 } from 'lucide-react';
 import { encodeGame } from '../utils/share';
 import { sound } from '../utils/sound';
 
 export default function TeacherDashboard({ onPlayGame }) {
-  const [games, setGames] = useState([]);
+  const [games, setGames] = useState(() => {
+    const saved = localStorage.getItem('learnova_games');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [];
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
@@ -23,17 +34,11 @@ export default function TeacherDashboard({ onPlayGame }) {
   const [sharedLink, setSharedLink] = useState('');
   const [copiedId, setCopiedId] = useState(null);
 
-  // Load games on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('learnova_games');
-    if (saved) {
-      try {
-        setGames(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  }, []);
+  // Stats Calculations
+  const totalQuizzes = games.length;
+  const totalQuestions = games.reduce((acc, g) => acc + (g.questions?.length || 0), 0);
+  const totalBoxQuizzes = games.filter(g => g.type === 'box').length;
+  const totalMazeQuizzes = games.filter(g => g.type === 'maze').length;
 
   const saveGamesToStorage = (newGames) => {
     localStorage.setItem('learnova_games', JSON.stringify(newGames));
@@ -354,85 +359,180 @@ export default function TeacherDashboard({ onPlayGame }) {
       ) : (
         /* Games Directory Dashboard */
         <div style={styles.dashboardContent} className="animate-fade-in">
-          {games.length === 0 ? (
-            <div className="glass-panel" style={styles.emptyState}>
-              <div style={styles.emptyIcon}>🎮</div>
-              <h3 style={styles.emptyTitle}>Belum ada kuis yang dibuat</h3>
-              <p style={styles.emptyDesc}>
-                Buat kuis interaktif pertama Anda dan bagikan tautannya langsung kepada para siswa Anda.
+          {/* Welcome Hero Banner */}
+          <div className="dashboard-hero">
+            <div className="hero-content">
+              <h2 className="hero-title">
+                <Sparkles size={24} color="var(--accent)" className="animate-float" /> Selamat Datang di Portal Guru Learnova!
+              </h2>
+              <p className="hero-desc">
+                Ciptakan pengalaman belajar yang interaktif dan menyenangkan untuk siswa Anda. Buat kuis dengan template menarik, bagikan tautannya, dan mainkan bersama di kelas!
               </p>
-              <button onClick={handleStartCreate} className="btn btn-primary" style={{ marginTop: '16px' }}>
-                <Plus size={18} /> Mulai Buat Kuis
-              </button>
-            </div>
-          ) : (
-            <div style={styles.gamesGrid}>
-              {games.map(game => (
-                <div key={game.id} className="glass-panel" style={styles.gameCard}>
-                  <div style={styles.gameCardTypeBadge}>
-                    {game.type === 'box' ? (
-                      <span style={{ ...styles.badge, background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
-                        <LayoutGrid size={12} /> Buka Kotak
-                      </span>
-                    ) : (
-                      <span style={{ ...styles.badge, background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6' }}>
-                        <Gamepad2 size={12} /> Labirin
-                      </span>
-                    )}
+              
+              {/* Stats Grid */}
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-icon" style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}>
+                    <FileText size={20} />
                   </div>
-
-                  <h3 style={styles.gameCardTitle}>{game.title}</h3>
-                  <p style={styles.gameCardDesc}>{game.desc || 'Tidak ada deskripsi.'}</p>
-                  
-                  <div style={styles.gameMeta}>
-                    <span>📝 {game.questions.length} Soal</span>
-                    <span>📅 {game.updatedAt}</span>
-                  </div>
-
-                  {copiedId === game.id && (
-                    <div style={styles.copiedAlert} className="animate-fade-in">
-                      <Check size={14} color="var(--success)" /> Tautan berhasil disalin!
-                    </div>
-                  )}
-
-                  <div style={styles.gameCardActions}>
-                    <button 
-                      onClick={() => onPlayGame(game)} 
-                      className="btn btn-success" 
-                      style={styles.cardBtn}
-                      title="Mainkan Game"
-                    >
-                      <Play size={16} /> Main
-                    </button>
-                    <button 
-                      onClick={(e) => handleShare(game, e)} 
-                      className="btn btn-primary" 
-                      style={styles.cardBtn}
-                      title="Bagikan Tautan Kuis"
-                    >
-                      <Share2 size={16} /> Bagikan
-                    </button>
-                    <button 
-                      onClick={() => handleEdit(game)} 
-                      className="btn btn-secondary" 
-                      style={{ ...styles.cardBtn, padding: '10px' }}
-                      title="Edit Kuis"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={(e) => handleDelete(game.id, e)} 
-                      className="btn btn-danger" 
-                      style={{ ...styles.cardBtn, padding: '10px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)' }}
-                      title="Hapus Kuis"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  <div className="stat-info">
+                    <span className="stat-value">{totalQuizzes}</span>
+                    <span className="stat-label">Total Kuis Anda</span>
                   </div>
                 </div>
-              ))}
+                
+                <div className="stat-card">
+                  <div className="stat-icon" style={{ background: 'linear-gradient(135deg, var(--success), #059669)' }}>
+                    <HelpCircle size={20} />
+                  </div>
+                  <div className="stat-info">
+                    <span className="stat-value">{totalQuestions}</span>
+                    <span className="stat-label">Total Pertanyaan</span>
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-icon" style={{ background: 'linear-gradient(135deg, var(--secondary), #db2777)' }}>
+                    <Gamepad2 size={20} />
+                  </div>
+                  <div className="stat-info">
+                    <span className="stat-value">{totalBoxQuizzes} Kotak | {totalMazeQuizzes} Labirin</span>
+                    <span className="stat-label">Varian Template</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Two-Column Dashboard Layout */}
+          <div className="dashboard-layout">
+            {/* Left Column: Sidebar Info & Guide */}
+            <aside className="sidebar-container">
+              {/* Quick Guide Card */}
+              <div className="glass-panel sidebar-card">
+                <h3 className="sidebar-card-title">
+                  <BookOpen size={18} color="var(--primary)" /> Panduan Penggunaan
+                </h3>
+                <div className="guide-step">
+                  <div className="guide-number">1</div>
+                  <div className="guide-text">
+                    <strong>Buat Kuis Baru</strong> dengan menekan tombol di kanan atas header. Masukkan judul kuis dan deskripsi.
+                  </div>
+                </div>
+                <div className="guide-step">
+                  <div className="guide-number">2</div>
+                  <div className="guide-text">
+                    <strong>Pilih Template</strong> game: <em>Buka Kotak</em> (kuis grid kartu) atau <em>Pengejaran Labirin</em> (arcade 2D).
+                  </div>
+                </div>
+                <div className="guide-step">
+                  <div className="guide-number">3</div>
+                  <div className="guide-text">
+                    <strong>Bagikan Tautan</strong> kuis kepada para siswa Anda. Mereka dapat langsung bermain tanpa pendaftaran akun!
+                  </div>
+                </div>
+              </div>
+
+              {/* Tips Card */}
+              <div className="glass-panel sidebar-card">
+                <h3 className="sidebar-card-title">
+                  <Lightbulb size={18} color="var(--warning)" /> Tips Mengajar
+                </h3>
+                <ul className="tips-list">
+                  <li>Gunakan game kuis di awal kelas sebagai aktivitas pemanasan (ice breaker) yang menyenangkan bagi murid.</li>
+                  <li>Template <em>Labirin</em> sangat baik untuk menguji refleks sekaligus pemahaman materi para siswa.</li>
+                  <li>Isilah deskripsi kuis untuk memberi instruksi cara pengerjaan yang jelas bagi siswa.</li>
+                </ul>
+              </div>
+            </aside>
+
+            {/* Right Column: Main Content */}
+            <main className="dashboard-main-content">
+              <div className="dashboard-section-header">
+                <h3 className="dashboard-section-title">Kuis Saya</h3>
+              </div>
+
+              {games.length === 0 ? (
+                <div className="glass-panel" style={styles.emptyState}>
+                  <div style={styles.emptyIcon}>🎮</div>
+                  <h3 style={styles.emptyTitle}>Belum ada kuis yang dibuat</h3>
+                  <p style={styles.emptyDesc}>
+                    Buat kuis interaktif pertama Anda dan bagikan tautannya langsung kepada para siswa Anda.
+                  </p>
+                  <button onClick={handleStartCreate} className="btn btn-primary" style={{ marginTop: '16px' }}>
+                    <Plus size={18} /> Mulai Buat Kuis
+                  </button>
+                </div>
+              ) : (
+                <div style={styles.gamesGrid}>
+                  {games.map(game => (
+                    <div key={game.id} className="glass-panel" style={styles.gameCard}>
+                      <div style={styles.gameCardTypeBadge}>
+                        {game.type === 'box' ? (
+                          <span style={{ ...styles.badge, background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
+                            <LayoutGrid size={12} /> Buka Kotak
+                          </span>
+                        ) : (
+                          <span style={{ ...styles.badge, background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6' }}>
+                            <Gamepad2 size={12} /> Labirin
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 style={styles.gameCardTitle}>{game.title}</h3>
+                      <p style={styles.gameCardDesc}>{game.desc || 'Tidak ada deskripsi.'}</p>
+                      
+                      <div style={styles.gameMeta}>
+                        <span>📝 {game.questions.length} Soal</span>
+                        <span>📅 {game.updatedAt}</span>
+                      </div>
+
+                      {copiedId === game.id && (
+                        <div style={styles.copiedAlert} className="animate-fade-in">
+                          <Check size={14} color="var(--success)" /> Tautan berhasil disalin!
+                        </div>
+                      )}
+
+                      <div style={styles.gameCardActions}>
+                        <button 
+                          onClick={() => onPlayGame(game)} 
+                          className="btn btn-success" 
+                          style={styles.cardBtn}
+                          title="Mainkan Game"
+                        >
+                          <Play size={16} /> Main
+                        </button>
+                        <button 
+                          onClick={(e) => handleShare(game, e)} 
+                          className="btn btn-primary" 
+                          style={styles.cardBtn}
+                          title="Bagikan Tautan Kuis"
+                        >
+                          <Share2 size={16} /> Bagikan
+                        </button>
+                        <button 
+                          onClick={() => handleEdit(game)} 
+                          className="btn btn-secondary" 
+                          style={{ ...styles.cardBtn, padding: '10px' }}
+                          title="Edit Kuis"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button 
+                          onClick={(e) => handleDelete(game.id, e)} 
+                          className="btn btn-danger" 
+                          style={{ ...styles.cardBtn, padding: '10px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)' }}
+                          title="Hapus Kuis"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </main>
+          </div>
         </div>
       )}
       {sharedLink && (

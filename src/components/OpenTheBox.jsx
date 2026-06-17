@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
-  Trophy, Clock, RotateCcw, AlertTriangle, ArrowLeft, 
-  CheckCircle, XCircle, ChevronRight, HelpCircle, Star, Home
+  Trophy, Clock, RotateCcw, ArrowLeft, 
+  CheckCircle, XCircle, HelpCircle, Star, Home
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 
@@ -95,7 +95,7 @@ export default function OpenTheBox({ game, onBack }) {
   };
 
   return (
-    <div style={styles.container}>
+    <div className="game-container">
       {/* Top Header Navigation */}
       <div style={styles.headerNav}>
         <button onClick={() => { sound.playClick(); onBack(); }} style={styles.backBtn}>
@@ -106,223 +106,256 @@ export default function OpenTheBox({ game, onBack }) {
 
       {gameState === 'intro' && (
         /* Game Introduction Screen */
-        <div className="glass-panel animate-fade-in" style={styles.introCard}>
-          <div style={styles.gameBadge}>📦 Buka Kotak</div>
-          <h2 style={styles.title}>{title}</h2>
-          <p style={styles.desc}>{desc || 'Sentuh kotak bernomor untuk membuka pertanyaan dan pilihlah jawaban yang benar.'}</p>
-          
-          <div style={styles.metaRow}>
-            <div style={styles.metaItem}>
-              <HelpCircle size={20} color="var(--primary)" />
-              <span>{questions.length} Pertanyaan</span>
-            </div>
-            <div style={styles.metaItem}>
-              <Trophy size={20} color="var(--warning)" />
-              <span>100 Poin per Soal</span>
-            </div>
+        <div className="glass-panel animate-fade-in intro-split-layout">
+          <div className="intro-info">
+            <div style={styles.gameBadge}>📦 Buka Kotak</div>
+            <h2 style={{ ...styles.title, textAlign: 'left', margin: 0 }}>{title}</h2>
+            <p style={{ ...styles.desc, textAlign: 'left' }}>{desc || 'Sentuh kotak bernomor untuk membuka pertanyaan dan pilihlah jawaban yang benar.'}</p>
+            
+            <button onClick={handleStartGame} className="btn btn-primary btn-lg" style={styles.startBtn}>
+              Mulai Bermain
+            </button>
           </div>
-
-          <button onClick={handleStartGame} className="btn btn-primary btn-lg" style={styles.startBtn}>
-            Mulai Bermain
-          </button>
+          
+          <div className="intro-illustration">
+            <h3 className="intro-ill-title"><Star size={16} color="var(--primary)" /> Informasi Kuis</h3>
+            <div style={styles.metaRow}>
+              <div style={styles.metaItem}>
+                <HelpCircle size={20} color="var(--primary)" />
+                <span>{questions.length} Pertanyaan</span>
+              </div>
+            </div>
+            <div style={styles.metaRow}>
+              <div style={styles.metaItem}>
+                <Trophy size={20} color="var(--warning)" />
+                <span>100 Poin per Soal</span>
+              </div>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '10px' }}>
+              <strong>Cara bermain:</strong> Klik pada grid kotak bernomor di sebelah kiri. Jawablah soal pilihan ganda yang muncul dengan benar untuk mendapatkan skor!
+            </p>
+          </div>
         </div>
       )}
 
       {gameState === 'playing' && (
-        /* Main Playing Area */
-        <div style={styles.playArea} className="animate-fade-in">
-          {/* Stats Bar */}
-          <div className="glass-panel" style={styles.statsBar}>
-            <div style={styles.stat}>
-              <Trophy size={18} color="var(--warning)" />
-              <div>
-                <span style={styles.statLabel}>SKOR</span>
-                <span style={styles.statValue}>{score}</span>
-              </div>
+        /* Main Playing Area with Split Layout */
+        <div className="game-split-layout animate-fade-in">
+          {/* Left Panel: Grid of Boxes */}
+          <div className="box-grid-panel">
+            <div style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center', marginBottom: '8px' }}>
+              Pilih Kotak Soal:
             </div>
-            <div style={styles.stat}>
-              <Clock size={18} color="var(--primary)" />
-              <div>
-                <span style={styles.statLabel}>WAKTU</span>
-                <span style={styles.statValue}>{formatTime(time)}</span>
-              </div>
-            </div>
-            <div style={styles.stat}>
-              <Star size={18} color="var(--secondary)" />
-              <div>
-                <span style={styles.statLabel}>PROGRES</span>
-                <span style={styles.statValue}>
-                  {boxes.filter(b => b.opened).length} / {questions.length}
-                </span>
-              </div>
+            <div style={styles.boxGrid}>
+              {boxes.map((box, idx) => (
+                <div 
+                  key={box.id}
+                  onClick={() => handleBoxClick(idx)}
+                  style={{
+                    ...styles.box,
+                    cursor: box.opened ? 'default' : 'pointer',
+                    transform: box.opened ? 'rotateY(180deg)' : 'none',
+                    opacity: box.opened ? 0.75 : 1,
+                    boxShadow: box.opened ? 'none' : 'var(--shadow-lg)'
+                  }}
+                  className={!box.opened ? "animate-pulse-glow" : ""}
+                >
+                  {/* Front Side: Numbered box */}
+                  <div style={styles.boxFront}>
+                    <div style={styles.boxGlow}></div>
+                    <span style={styles.boxNumber}>{idx + 1}</span>
+                  </div>
+
+                  {/* Back Side: Solved Indicator */}
+                  <div style={{
+                    ...styles.boxBack,
+                    background: box.isCorrect 
+                      ? 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(6, 95, 70, 0.4) 100%)' 
+                      : 'radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, rgba(153, 27, 27, 0.4) 100%)',
+                    borderColor: box.isCorrect ? 'var(--success)' : 'var(--danger)'
+                  }}>
+                    {box.isCorrect ? (
+                      <CheckCircle size={48} color="var(--success)" style={{ transform: 'scaleX(-1)' }} />
+                    ) : (
+                      <XCircle size={48} color="var(--danger)" style={{ transform: 'scaleX(-1)' }} />
+                    )}
+                    <span style={{ ...styles.boxBackNumber, transform: 'scaleX(-1)' }}>#{idx + 1}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Grid of Boxes */}
-          <div style={styles.boxGrid}>
-            {boxes.map((box, idx) => (
-              <div 
-                key={box.id}
-                onClick={() => handleBoxClick(idx)}
-                style={{
-                  ...styles.box,
-                  cursor: box.opened ? 'default' : 'pointer',
-                  transform: box.opened ? 'rotateY(180deg)' : 'none',
-                  opacity: box.opened ? 0.75 : 1,
-                  boxShadow: box.opened ? 'none' : 'var(--shadow-lg)'
-                }}
-                className={!box.opened ? "animate-pulse-glow" : ""}
-              >
-                {/* Front Side: Numbered box */}
-                <div style={styles.boxFront}>
-                  <div style={styles.boxGlow}></div>
-                  <span style={styles.boxNumber}>{idx + 1}</span>
-                </div>
-
-                {/* Back Side: Solved Indicator */}
-                <div style={{
-                  ...styles.boxBack,
-                  background: box.isCorrect 
-                    ? 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(6, 95, 70, 0.4) 100%)' 
-                    : 'radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, rgba(153, 27, 27, 0.4) 100%)',
-                  borderColor: box.isCorrect ? 'var(--success)' : 'var(--danger)'
-                }}>
-                  {box.isCorrect ? (
-                    <CheckCircle size={36} color="var(--success)" style={{ transform: 'scaleX(-1)' }} />
-                  ) : (
-                    <XCircle size={36} color="var(--danger)" style={{ transform: 'scaleX(-1)' }} />
-                  )}
-                  <span style={{ ...styles.boxBackNumber, transform: 'scaleX(-1)' }}>#{idx + 1}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      )}
-
-      {/* Question Overlay Modal */}
-      {gameState === 'playing' && activeQuestionIdx !== null && (
-        <div style={styles.questionOverlay} className="animate-fade-in">
-          <div 
-            className={`glass-panel animate-fade-in ${selectedAnswer !== null && selectedAnswer !== questions[activeQuestionIdx].correct ? 'animate-shake' : ''}`}
-            style={{
-              ...styles.questionModal,
-              borderColor: selectedAnswer === null 
-                ? 'var(--panel-border)' 
-                : selectedAnswer === questions[activeQuestionIdx].correct 
-                  ? 'var(--success)' 
-                  : 'var(--danger)'
-            }}
-          >
-            <div style={styles.modalHeader}>
-              <span style={styles.questionLabel}>PERTANYAAN KOTAK SOAL #{activeQuestionIdx + 1}</span>
-            </div>
-            
-            <h3 style={styles.questionText}>{questions[activeQuestionIdx].q}</h3>
-
-            <div style={styles.optionsContainer}>
-              {questions[activeQuestionIdx].options.map((option, optIdx) => {
-                const isCorrectAnswer = optIdx === questions[activeQuestionIdx].correct;
-                const isSelected = optIdx === selectedAnswer;
+          {/* Right Panel: Stats / Active Question Card */}
+          <div className="game-sidebar">
+            {activeQuestionIdx === null ? (
+              /* If no box is selected, show general stats & guide */
+              <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h3 style={{ fontSize: '1.1rem', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px', fontWeight: '600' }}>
+                  Status Permainan
+                </h3>
                 
-                let optionStyle = { ...styles.optionButton };
-                if (selectedAnswer !== null) {
-                  if (isCorrectAnswer) {
-                    optionStyle.borderColor = 'var(--success)';
-                    optionStyle.background = 'rgba(16, 185, 129, 0.2)';
-                    optionStyle.color = '#34d399';
-                  } else if (isSelected) {
-                    optionStyle.borderColor = 'var(--danger)';
-                    optionStyle.background = 'rgba(239, 68, 68, 0.2)';
-                    optionStyle.color = '#f87171';
-                  } else {
-                    optionStyle.opacity = 0.4;
-                  }
-                }
+                {/* Stats list in card layout */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ ...styles.stat, justifyContent: 'flex-start', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <Trophy size={20} color="var(--warning)" />
+                    <div>
+                      <span style={styles.statLabel}>SKOR</span>
+                      <span style={styles.statValue}>{score}</span>
+                    </div>
+                  </div>
+                  
+                  <div style={{ ...styles.stat, justifyContent: 'flex-start', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <Clock size={20} color="var(--primary)" />
+                    <div>
+                      <span style={styles.statLabel}>WAKTU</span>
+                      <span style={styles.statValue}>{formatTime(time)}</span>
+                    </div>
+                  </div>
+                  
+                  <div style={{ ...styles.stat, justifyContent: 'flex-start', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <Star size={20} color="var(--secondary)" />
+                    <div>
+                      <span style={styles.statLabel}>PROGRES</span>
+                      <span style={styles.statValue}>
+                        {boxes.filter(b => b.opened).length} / {questions.length} Kotak
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-                return (
-                  <button
-                    key={optIdx}
-                    disabled={selectedAnswer !== null}
-                    onClick={() => handleSelectAnswer(optIdx)}
-                    style={optionStyle}
-                    className={selectedAnswer === null ? "btn-secondary" : ""}
-                  >
-                    <span style={{
-                      ...styles.optionBadge,
-                      background: selectedAnswer === null 
-                        ? 'rgba(255,255,255,0.08)' 
-                        : isCorrectAnswer 
-                          ? 'var(--success)' 
-                          : isSelected 
-                            ? 'var(--danger)' 
-                            : 'rgba(255,255,255,0.05)'
-                    }}>
-                      {String.fromCharCode(65 + optIdx)}
-                    </span>
-                    <span style={styles.optionText}>{option}</span>
-                  </button>
-                );
-              })}
-            </div>
+                <div style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px dashed rgba(99, 102, 241, 0.2)', borderRadius: '10px', padding: '14px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', textAlign: 'center' }}>
+                  💡 <strong>Petunjuk:</strong> Pilih kotak bernomor di sebelah kiri untuk membuka pertanyaan kuis. Jawablah secepat mungkin untuk performa terbaik!
+                </div>
+              </div>
+            ) : (
+              /* If a box is selected, show active question directly here! */
+              <div 
+                className={`glass-panel active-q-card animate-fade-in ${selectedAnswer !== null && selectedAnswer !== questions[activeQuestionIdx].correct ? 'animate-shake' : ''}`}
+                style={{
+                  borderColor: selectedAnswer === null 
+                    ? 'var(--panel-border)' 
+                    : selectedAnswer === questions[activeQuestionIdx].correct 
+                      ? 'var(--success)' 
+                      : 'var(--danger)'
+                }}
+              >
+                <div className="active-q-header">
+                  PERTANYAAN KOTAK #{activeQuestionIdx + 1}
+                </div>
+                
+                <h3 className="active-q-text">{questions[activeQuestionIdx].q}</h3>
+
+                <div style={styles.optionsContainer}>
+                  {questions[activeQuestionIdx].options.map((option, optIdx) => {
+                    const isCorrectAnswer = optIdx === questions[activeQuestionIdx].correct;
+                    const isSelected = optIdx === selectedAnswer;
+                    
+                    let optionStyle = { ...styles.optionButton };
+                    if (selectedAnswer !== null) {
+                      if (isCorrectAnswer) {
+                        optionStyle.borderColor = 'var(--success)';
+                        optionStyle.background = 'rgba(16, 185, 129, 0.2)';
+                        optionStyle.color = '#34d399';
+                      } else if (isSelected) {
+                        optionStyle.borderColor = 'var(--danger)';
+                        optionStyle.background = 'rgba(239, 68, 68, 0.2)';
+                        optionStyle.color = '#f87171';
+                      } else {
+                        optionStyle.opacity = 0.4;
+                      }
+                    }
+
+                    return (
+                      <button
+                        key={optIdx}
+                        disabled={selectedAnswer !== null}
+                        onClick={() => handleSelectAnswer(optIdx)}
+                        style={optionStyle}
+                        className={selectedAnswer === null ? "btn-secondary" : ""}
+                      >
+                        <span style={{
+                          ...styles.optionBadge,
+                          background: selectedAnswer === null 
+                            ? 'rgba(255,255,255,0.08)' 
+                            : isCorrectAnswer 
+                              ? 'var(--success)' 
+                              : isSelected 
+                                ? 'var(--danger)' 
+                                : 'rgba(255,255,255,0.05)'
+                        }}>
+                          {String.fromCharCode(65 + optIdx)}
+                        </span>
+                        <span style={styles.optionText}>{option}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {gameState === 'ended' && (
-        /* Scoreboard Screen */
-        <div className="glass-panel animate-fade-in" style={styles.endedCard}>
-          <div style={styles.trophyIcon}>🏆</div>
-          <h2 style={styles.victoryTitle}>Kuis Selesai!</h2>
-          <p style={styles.victorySubtitle}>Kerja bagus! Anda telah menyelesaikan semua tantangan.</p>
+        /* Scoreboard Screen with Split Layout */
+        <div className="glass-panel animate-fade-in ended-split-layout">
+          {/* Left Column: Stats */}
+          <div className="ended-stats-panel">
+            <div style={styles.trophyIcon}>🏆</div>
+            <h2 style={styles.victoryTitle}>Kuis Selesai!</h2>
+            <p style={styles.victorySubtitle}>Kerja bagus! Anda telah menyelesaikan semua tantangan.</p>
 
-          <div style={styles.scoreBoardGrid}>
-            <div style={styles.scoreItem}>
-              <span style={styles.scoreVal}>{score}</span>
-              <span style={styles.scoreLbl}>Total Skor</span>
+            <div style={styles.scoreBoardGrid}>
+              <div style={styles.scoreItem}>
+                <span style={styles.scoreVal}>{score}</span>
+                <span style={styles.scoreLbl}>Total Skor</span>
+              </div>
+              <div style={styles.scoreItem}>
+                <span style={styles.scoreVal}>{formatTime(time)}</span>
+                <span style={styles.scoreLbl}>Waktu Total</span>
+              </div>
+              <div style={styles.scoreItem}>
+                <span style={styles.scoreVal}>{getAccuracy()}%</span>
+                <span style={styles.scoreLbl}>Akurasi</span>
+              </div>
             </div>
-            <div style={styles.scoreItem}>
-              <span style={styles.scoreVal}>{formatTime(time)}</span>
-              <span style={styles.scoreLbl}>Waktu Total</span>
-            </div>
-            <div style={styles.scoreItem}>
-              <span style={styles.scoreVal}>{getAccuracy()}%</span>
-              <span style={styles.scoreLbl}>Akurasi</span>
+
+            <div style={styles.endActions}>
+              <button onClick={() => { sound.playClick(); onBack(); }} className="btn btn-secondary" style={{ flex: 1 }}>
+                <Home size={18} /> Menu
+              </button>
+              <button onClick={handleStartGame} className="btn btn-primary" style={{ flex: 1 }}>
+                <RotateCcw size={18} /> Main Lagi
+              </button>
             </div>
           </div>
 
-          <h3 style={styles.summaryTitle}>Tinjauan Jawaban</h3>
-          <div style={styles.summaryList}>
-            {questions.map((q, idx) => {
-              const box = boxes.find(b => b.id === idx);
-              return (
-                <div key={idx} style={styles.summaryRow}>
-                  <div style={styles.summaryQInfo}>
-                    <span style={{
-                      ...styles.summaryNumber,
-                      background: box?.isCorrect ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                      color: box?.isCorrect ? 'var(--success)' : 'var(--danger)'
-                    }}>
-                      #{idx + 1}
-                    </span>
-                    <span style={styles.summaryQText}>{q.q}</span>
+          {/* Right Column: Answer Review */}
+          <div className="ended-review-panel">
+            <h3 style={{ ...styles.summaryTitle, marginTop: 0 }}>Tinjauan Jawaban</h3>
+            <div style={{ ...styles.summaryList, maxHeight: '380px' }}>
+              {questions.map((q, idx) => {
+                const box = boxes.find(b => b.id === idx);
+                return (
+                  <div key={idx} style={styles.summaryRow}>
+                    <div style={styles.summaryQInfo}>
+                      <span style={{
+                        ...styles.summaryNumber,
+                        background: box?.isCorrect ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                        color: box?.isCorrect ? 'var(--success)' : 'var(--danger)'
+                      }}>
+                        #{idx + 1}
+                      </span>
+                      <span style={styles.summaryQText}>{q.q}</span>
+                    </div>
+                    <div style={styles.summaryAnsInfo}>
+                      <span style={styles.correctLabel}>Kunci: {q.options[q.correct]}</span>
+                    </div>
                   </div>
-                  <div style={styles.summaryAnsInfo}>
-                    <span style={styles.correctLabel}>Kunci: {q.options[q.correct]}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div style={styles.endActions}>
-            <button onClick={() => { sound.playClick(); onBack(); }} className="btn btn-secondary">
-              <Home size={18} /> Menu Utama
-            </button>
-            <button onClick={handleStartGame} className="btn btn-primary">
-              <RotateCcw size={18} /> Main Lagi
-            </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -449,12 +482,13 @@ const styles = {
   },
   boxGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, 165px)',
     gap: '15px',
-    perspective: '1000px'
+    perspective: '1000px',
+    justifyContent: 'center'
   },
   box: {
-    height: '130px',
+    height: '165px',
     borderRadius: '16px',
     transformStyle: 'preserve-3d',
     transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -483,7 +517,7 @@ const styles = {
     pointerEvents: 'none'
   },
   boxNumber: {
-    fontSize: '2.5rem',
+    fontSize: '3.2rem',
     fontWeight: '800',
     fontFamily: 'var(--font-display)',
     color: '#818cf8',
@@ -504,7 +538,7 @@ const styles = {
     gap: '8px'
   },
   boxBackNumber: {
-    fontSize: '0.8rem',
+    fontSize: '0.95rem',
     fontWeight: '700',
     color: 'rgba(255,255,255,0.4)'
   },
@@ -557,24 +591,24 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '15px',
-    padding: '14px 20px',
+    padding: '16px 24px',
     borderRadius: '12px',
     border: '1px solid rgba(255,255,255,0.08)',
     background: 'rgba(255,255,255,0.02)',
     color: 'white',
     cursor: 'pointer',
-    fontSize: '1rem',
+    fontSize: '1.15rem',
     textAlign: 'left',
     transition: 'all 0.2s ease-in-out'
   },
   optionBadge: {
-    width: '32px',
-    height: '32px',
+    width: '38px',
+    height: '38px',
     borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '0.95rem',
+    fontSize: '1.1rem',
     fontWeight: '800',
     color: 'white',
     flexShrink: 0

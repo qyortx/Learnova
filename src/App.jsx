@@ -1,32 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { decodeGame } from './utils/share';
 import TeacherDashboard from './components/TeacherDashboard';
 import OpenTheBox from './components/OpenTheBox';
 import MazeChase from './components/MazeChase';
-import { AlertCircle, HelpCircle, Gamepad2, ArrowLeft } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { sound } from './utils/sound';
 
 export default function App() {
-  const [playConfig, setPlayConfig] = useState(null);
-  const [isStudentMode, setIsStudentMode] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  // Check URL parameters for game play token on mount
-  useEffect(() => {
+  const [playConfig, setPlayConfig] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('play');
-
     if (token) {
       const decoded = decodeGame(token);
       if (decoded && decoded.title && decoded.questions && decoded.questions.length > 0) {
-        setPlayConfig(decoded);
-        setIsStudentMode(true);
-      } else {
-        setErrorMsg('Tautan kuis tidak valid atau data rusak. Pastikan link yang Anda buka sudah benar.');
-        sound.playIncorrect();
+        return decoded;
       }
     }
-  }, []);
+    return null;
+  });
+
+  const [isStudentMode, setIsStudentMode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('play');
+    if (token) {
+      const decoded = decodeGame(token);
+      if (decoded && decoded.title && decoded.questions && decoded.questions.length > 0) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  const [errorMsg, setErrorMsg] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('play');
+    if (token) {
+      const decoded = decodeGame(token);
+      if (!(decoded && decoded.title && decoded.questions && decoded.questions.length > 0)) {
+        return 'Tautan kuis tidak valid atau data rusak. Pastikan link yang Anda buka sudah benar.';
+      }
+    }
+    return '';
+  });
+
+  // Play incorrect sound if errorMsg is set on mount
+  useEffect(() => {
+    if (errorMsg) {
+      sound.playIncorrect();
+    }
+  }, [errorMsg]);
 
   const handlePlayGameLocal = (game) => {
     sound.playClick();
